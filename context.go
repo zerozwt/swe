@@ -52,6 +52,9 @@ func (ctx *Context) Get(key any) (any, bool) {
 }
 
 func CtxValue[T any](ctx *Context, key any) (ret T, ok bool) {
+	if ctx == nil {
+		return
+	}
 	value, firstOk := ctx.Get(key)
 	if !firstOk {
 		return
