@@ -12,6 +12,7 @@ type Context struct {
 
 	values sync.Map
 	chain  []HandlerFunc
+	index  int
 }
 
 type HandlerFunc func(*Context)
@@ -39,6 +40,7 @@ func (ctx *Context) reset() {
 	ctx.Response = nil
 	ctx.values = sync.Map{}
 	ctx.chain = nil
+	ctx.index = -1
 }
 
 func (ctx *Context) Put(key, value any) {
@@ -61,10 +63,10 @@ func CtxValue[T any](ctx *Context, key any) (ret T, ok bool) {
 }
 
 func (ctx *Context) Next() {
-	if len(ctx.chain) == 0 {
+	ctx.index++
+	defer func() { ctx.index-- }()
+	if len(ctx.chain) <= ctx.index {
 		panic(errors.New("context no handler"))
 	}
-	handler := ctx.chain[0]
-	ctx.chain = ctx.chain[1:]
-	handler(ctx)
+	ctx.chain[ctx.index](ctx)
 }
