@@ -10,7 +10,24 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
-func MakeAPIHandler[InType, OutType any](handler func(*Context, *InType) (*OutType, error), errCode int) HandlerFunc {
+type sweError struct {
+	err  error
+	code int
+}
+
+func (e sweError) Err() error { return e.err }
+func (e sweError) Code() int  { return e.code }
+
+type SweError interface {
+	Err() error
+	Code() int
+}
+
+func Error(code int, err error) SweError {
+	return sweError{code: code, err: err}
+}
+
+func MakeAPIHandler[InType, OutType any](handler func(*Context, *InType) (*OutType, SweError)) HandlerFunc {
 	return func(ctx *Context) {
 		r := ctx.Request
 		w := ctx.Response
@@ -40,9 +57,9 @@ func MakeAPIHandler[InType, OutType any](handler func(*Context, *InType) (*OutTy
 		outCode := 0
 		outMsg := ""
 		out, err := handler(ctx, &param)
-		if err != nil {
-			outCode = errCode
-			outMsg = err.Error()
+		if err.Err() != nil {
+			outCode = err.Code()
+			outMsg = err.Err().Error()
 			CtxLogger(ctx).Error("request %s failed: %v", r.URL.Path, err)
 		}
 		outMap := map[string]any{
@@ -51,9 +68,9 @@ func MakeAPIHandler[InType, OutType any](handler func(*Context, *InType) (*OutTy
 			"data": out,
 		}
 
-		outData, err := json.Marshal(outMap)
-		if err != nil {
-			handleError(w, r, err)
+		outData, err2 := json.Marshal(outMap)
+		if err2 != nil {
+			handleError(w, r, err2)
 			return
 		}
 
