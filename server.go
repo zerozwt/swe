@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type APIServer struct {
@@ -91,6 +92,9 @@ type Engine struct {
 
 	api  *APIServer
 	file *FileServer
+
+	server *http.Server
+	closed int32
 }
 
 func NewEngine(apiPrefix string, apiServer *APIServer, fileServer *FileServer) *Engine {
@@ -102,8 +106,15 @@ func NewEngine(apiPrefix string, apiServer *APIServer, fileServer *FileServer) *
 }
 
 func (s *Engine) Serve(addr string) {
-	server := http.Server{Addr: addr, Handler: s}
-	server.ListenAndServe()
+	s.server = &http.Server{Addr: addr, Handler: s}
+	s.server.ListenAndServe()
+}
+
+func (s *Engine) Close() error {
+	if atomic.AddInt32(&s.closed, 1) == 1 {
+		return s.server.Close()
+	}
+	return nil
 }
 
 func (s *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
