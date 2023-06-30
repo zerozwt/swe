@@ -19,6 +19,7 @@ func InitLogID(ctx *Context) {
 		logid = fmt.Sprint(ts<<20 | (low & 0xFFFFF))
 	}
 	ctx.Put(CtxKeyLogID, logid)
+	ctx.Response.Header().Set(httpHeaderLogIDKey, logid)
 	ctx.Next()
 }
 
