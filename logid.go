@@ -24,6 +24,6 @@ func InitLogID(ctx *Context) {
 }
 
 func CtxLogID(ctx *Context) string {
-	logid, _ := CtxValue[string](ctx, httpHeaderLogIDKey)
+	logid, _ := CtxValue[string](ctx, CtxKeyLogID)
 	return logid
 }
