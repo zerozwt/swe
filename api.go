@@ -27,6 +27,10 @@ func Error(code int, err error) SweError {
 	return sweError{code: code, err: err}
 }
 
+type Validator interface {
+	Validate() error
+}
+
 func MakeAPIHandler[InType, OutType any](handler func(*Context, *InType) (*OutType, SweError)) HandlerFunc {
 	return func(ctx *Context) {
 		r := ctx.Request
@@ -50,6 +54,12 @@ func MakeAPIHandler[InType, OutType any](handler func(*Context, *InType) (*OutTy
 				return
 			}
 		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if err := validateRequest(param); err != nil {
+			CtxLogger(ctx).Error("validate request parameters to %s failed: %v", r.URL.Path, err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -119,4 +129,11 @@ func DecodeForm(r *http.Request, ptr any) error {
 func handleError(w http.ResponseWriter, r *http.Request, err error) {
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte(fmt.Sprint(err)))
+}
+
+func validateRequest(req any) error {
+	if v, ok := req.(Validator); ok {
+		return v.Validate()
+	}
+	return nil
 }
