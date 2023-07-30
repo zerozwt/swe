@@ -57,7 +57,7 @@ func MakeAPIHandler[InType, OutType any](handler func(*Context, *InType) (*OutTy
 		outCode := 0
 		outMsg := ""
 		out, err := handler(ctx, &param)
-		if err.Err() != nil {
+		if err != nil && err.Err() != nil {
 			outCode = err.Code()
 			outMsg = err.Err().Error()
 			CtxLogger(ctx).Error("request %s failed: %v", r.URL.Path, err)
