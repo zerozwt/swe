@@ -10,21 +10,25 @@ import (
 )
 
 type APIServer struct {
-	handlers map[string]http.Handler
+	handlers map[string]map[string]http.Handler
 	lock     sync.RWMutex
 }
 
 func NewAPIServer() *APIServer {
 	return &APIServer{
-		handlers: make(map[string]http.Handler),
+		handlers: make(map[string]map[string]http.Handler),
 	}
 }
 
-func (s *APIServer) RegisterHandler(path string, handler HandlerFunc, middlewares ...HandlerFunc) {
+func (s *APIServer) RegisterHandler(method, path string, handler HandlerFunc, middlewares ...HandlerFunc) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.handlers[path] = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.handlers[method]; !ok {
+		s.handlers[method] = make(map[string]http.Handler)
+	}
+
+	s.handlers[method][path] = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := acquireContext(r, w, append(middlewares, handler)...)
 		defer releaseContext(ctx)
 		ctx.Next()
@@ -35,10 +39,13 @@ func (s *APIServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	if handler, ok := s.handlers[r.URL.Path]; ok {
-		handler.ServeHTTP(w, r)
-		return
+	if set, ok := s.handlers[r.Method]; ok {
+		if handler, ok := set[r.URL.Path]; ok {
+			handler.ServeHTTP(w, r)
+			return
+		}
 	}
+
 	CtxLogger(nil).Error("request to API %s failed: handler not registered", r.URL.Path)
 	http.NotFound(w, r)
 }
