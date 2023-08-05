@@ -27,3 +27,10 @@ func CtxLogID(ctx *Context) string {
 	logid, _ := CtxValue[string](ctx, CtxKeyLogID)
 	return logid
 }
+
+func AssignLogID(ctx *Context) {
+	ts := time.Now().Unix()
+	low := logidIncr.Add(1)
+	logid := fmt.Sprint(ts<<20 | (low & 0xFFFFF))
+	ctx.Put(CtxKeyLogID, logid)
+}
