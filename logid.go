@@ -1,6 +1,9 @@
 package swe
 
 import (
+	"crypto/rand"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -8,15 +11,19 @@ import (
 
 var CtxKeyLogID string = "ctx_logid"
 var httpHeaderLogIDKey string = "X-Logid"
-var logidIncr atomic.Int64
+var logidIncr atomic.Uint64
+
+func init() {
+	var buf [8]byte
+	rand.Read(buf[:])
+	logidIncr.Store(binary.BigEndian.Uint64(buf[:]))
+}
 
 func InitLogID(ctx *Context) {
 	logid := ctx.Request.Header.Get(httpHeaderLogIDKey)
 	if len(logid) == 0 {
 		// generate logid
-		ts := time.Now().Unix()
-		low := logidIncr.Add(1)
-		logid = fmt.Sprint(ts<<20 | (low & 0xFFFFF))
+		logid = generateLogID()
 	}
 	ctx.Put(CtxKeyLogID, logid)
 	ctx.Response.Header().Set(httpHeaderLogIDKey, logid)
@@ -29,8 +36,15 @@ func CtxLogID(ctx *Context) string {
 }
 
 func AssignLogID(ctx *Context) {
-	ts := time.Now().Unix()
-	low := logidIncr.Add(1)
-	logid := fmt.Sprint(ts<<20 | (low & 0xFFFFF))
-	ctx.Put(CtxKeyLogID, logid)
+	ctx.Put(CtxKeyLogID, generateLogID())
+}
+
+func generateLogID() string {
+	now := time.Now()
+
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], logidIncr.Add(1))
+
+	return fmt.Sprintf("%04d%02d%02d%02d%02d%02d", now.Year(), now.Month(), now.Day(),
+		now.Hour(), now.Minute(), now.Second()) + hex.EncodeToString(buf[:])
 }
