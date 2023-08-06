@@ -74,8 +74,7 @@ func (s *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.NotFound(w, r)
 				return
 			}
-		}
-		if info.IsDir() && s.forbidDir {
+		} else if info.IsDir() && s.forbidDir {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
