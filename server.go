@@ -127,6 +127,7 @@ func (s *Engine) Close() error {
 func (s *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(r.URL.Path, s.apiPrefix) {
 		s.api.ServeHTTP(w, r)
+		return
 	}
 	s.file.ServeHTTP(w, r)
 }
