@@ -58,7 +58,7 @@ func MakeAPIHandler[InType, OutType any](handler func(*Context, *InType) (*OutTy
 			return
 		}
 
-		if err := validateRequest(ctx, param); err != nil {
+		if err := validateRequest(ctx, &param); err != nil {
 			CtxLogger(ctx).Error("validate request parameters to %s failed: %v", r.URL.Path, err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
